@@ -88,7 +88,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         redirectUri,
         responseType: AuthSession.ResponseType.Token,
         extraParams: {},
-        additionalParameters: {},
+        
       });
 
       const result = await request.promptAsync({
