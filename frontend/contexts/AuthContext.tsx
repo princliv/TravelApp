@@ -1,5 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { auth } from '@/config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AuthSession from 'expo-auth-session';
+import {
+    User as FirebaseUser,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    signOut
+} from 'firebase/auth';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 interface User {
   email: string;
@@ -11,6 +19,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -25,39 +34,83 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthState();
-  }, []);
-
-  const checkAuthState = async () => {
-    try {
-      const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      try {
+        if (firebaseUser) {
+          const userData = {
+            email: firebaseUser.email || '',
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
+          };
+          setUser(userData);
+          await AsyncStorage.setItem('user', JSON.stringify(userData));
+        } else {
+          setUser(null);
+          await AsyncStorage.removeItem('user');
+        }
+      } catch (error) {
+        console.error('Error handling auth state change:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error checking auth state:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       
-      // Simulate API call - in a real app, you'd make an actual API request
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await signInWithEmailAndPassword(auth, email, password);
+      return true;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (): Promise<boolean> => {
+    try {
+      setIsLoading(true);
       
-      // For demo purposes, accept any email/password combination
-      if (email && password) {
-        const userData = { email, name: email.split('@')[0] };
-        setUser(userData);
-        await AsyncStorage.setItem('user', JSON.stringify(userData));
+      // For now, we'll use a simplified approach that works with Expo
+      // This opens a web browser for Google Sign-In
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: 'travelapp',
+        path: 'auth',
+      });
+
+      const request = new AuthSession.AuthRequest({
+        clientId: '984809187231-kk0k9ocuk14co0ouhi64uef964d9p376.apps.googleusercontent.com',
+        scopes: ['openid', 'profile', 'email'],
+        redirectUri,
+        responseType: AuthSession.ResponseType.Token,
+        extraParams: {},
+        additionalParameters: {},
+      });
+
+      const result = await request.promptAsync({
+        authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+      });
+
+      if (result.type === 'success' && result.authentication?.accessToken) {
+        // For demo purposes, we'll create a mock user
+        // In a real app, you'd exchange the token for user info
+        const mockUser = {
+          email: 'user@gmail.com',
+          name: 'Google User',
+        };
+        
+        setUser(mockUser);
+        await AsyncStorage.setItem('user', JSON.stringify(mockUser));
         return true;
       }
+      
       return false;
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      console.error('Google Sign-In error:', error);
       return false;
     } finally {
       setIsLoading(false);
@@ -66,8 +119,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = async (): Promise<void> => {
     try {
-      setUser(null);
-      await AsyncStorage.removeItem('user');
+      await signOut(auth);
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -78,6 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     isAuthenticated: !!user,
     login,
+    loginWithGoogle,
     logout,
   };
 

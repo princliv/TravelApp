@@ -1,25 +1,25 @@
+import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading } = useAuth();
+  const { login, loginWithGoogle, isLoading } = useAuth();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -37,6 +37,13 @@ export default function LoginScreen() {
     const success = await login(email, password);
     if (!success) {
       Alert.alert('Error', 'Invalid email or password');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    const success = await loginWithGoogle();
+    if (!success) {
+      Alert.alert('Error', 'Google Sign-In failed');
     }
   };
 
@@ -131,6 +138,39 @@ export default function LoginScreen() {
       color: colors.tint,
       fontWeight: '600',
     },
+    googleButton: {
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 10,
+      flexDirection: 'row',
+      justifyContent: 'center',
+    },
+    googleButtonText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 8,
+    },
+    divider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    dividerText: {
+      marginHorizontal: 16,
+      color: colors.text,
+      opacity: 0.7,
+      fontSize: 14,
+    },
   });
 
   return (
@@ -188,6 +228,26 @@ export default function LoginScreen() {
             >
               <Text style={styles.loginButtonText}>
                 {isLoading ? 'Signing In...' : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.googleButton,
+                isLoading && styles.loginButtonDisabled,
+              ]}
+              onPress={handleGoogleLogin}
+              disabled={isLoading}
+            >
+              <Text style={styles.googleButtonText}>🔍</Text>
+              <Text style={styles.googleButtonText}>
+                {isLoading ? 'Signing In...' : 'Continue with Google'}
               </Text>
             </TouchableOpacity>
           </View>
