@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -36,154 +37,11 @@ interface Achievement {
 }
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme ?? 'light'] || Colors.light;
 
-  // Mock user stats
-  const userStats = {
-    totalTrips: 12,
-    countriesVisited: 8,
-    totalSpent: 15420,
-    favoriteDestination: 'Japan',
-    memberSince: '2023-01-15',
-    level: 'Explorer',
-  };
-
-  // Mock trip history
-  const tripHistory: TripHistory[] = [
-    {
-      id: '1',
-      destination: 'Tokyo, Japan',
-      date: '2024-02-15',
-      duration: '7 days',
-      cost: 3200,
-      status: 'completed',
-      image: '🏯',
-    },
-    {
-      id: '2',
-      destination: 'Paris, France',
-      date: '2024-03-20',
-      duration: '5 days',
-      cost: 2800,
-      status: 'upcoming',
-      image: '🗼',
-    },
-    {
-      id: '3',
-      destination: 'Bali, Indonesia',
-      date: '2024-01-10',
-      duration: '10 days',
-      cost: 1800,
-      status: 'completed',
-      image: '🏝️',
-    },
-    {
-      id: '4',
-      destination: 'New York, USA',
-      date: '2023-12-05',
-      duration: '6 days',
-      cost: 2500,
-      status: 'completed',
-      image: '🗽',
-    },
-    {
-      id: '5',
-      destination: 'London, UK',
-      date: '2023-11-15',
-      duration: '4 days',
-      cost: 2200,
-      status: 'completed',
-      image: '🏰',
-    },
-  ];
-
-  // Mock achievements
-  const achievements: Achievement[] = [
-    {
-      id: '1',
-      title: 'First Trip',
-      description: 'Completed your first trip',
-      icon: '🎯',
-      unlocked: true,
-    },
-    {
-      id: '2',
-      title: 'Globe Trotter',
-      description: 'Visited 5 different countries',
-      icon: '🌍',
-      unlocked: true,
-    },
-    {
-      id: '3',
-      title: 'Budget Master',
-      description: 'Saved over $1000 on trips',
-      icon: '💰',
-      unlocked: true,
-    },
-    {
-      id: '4',
-      title: 'Adventure Seeker',
-      description: 'Completed 10 trips',
-      icon: '🏔️',
-      unlocked: true,
-    },
-    {
-      id: '5',
-      title: 'World Explorer',
-      description: 'Visit 15 countries',
-      icon: '🌎',
-      unlocked: false,
-      progress: 8,
-    },
-    {
-      id: '6',
-      title: 'VIP Traveler',
-      description: 'Spend $20,000 on trips',
-      icon: '👑',
-      unlocked: false,
-      progress: 77,
-    },
-  ];
-
-  const handleEditProfile = () => {
-    Alert.alert('Edit Profile', 'Profile editing feature coming soon!');
-  };
-
-  const handleViewTrip = (trip: TripHistory) => {
-    Alert.alert(
-      trip.destination,
-      `${trip.duration} trip - ${trip.status === 'completed' ? 'Completed' : 'Upcoming'}\nCost: $${trip.cost.toLocaleString()}`,
-      [
-        { text: 'View Details', onPress: () => console.log('View trip details') },
-        { text: 'OK' },
-      ]
-    );
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: logout },
-      ]
-    );
-  };
-
-  const handleViewAllTrips = () => {
-    Alert.alert('All Trips', 'Complete trip history feature coming soon!');
-  };
-
-  const handleShareProfile = () => {
-    Alert.alert('Share Profile', 'Share your travel achievements with friends!');
-  };
-
-  const getUnlockedAchievements = () => achievements.filter(a => a.unlocked);
-  const getLockedAchievements = () => achievements.filter(a => !a.unlocked);
-
+  // Define styles first
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -437,7 +295,212 @@ export default function ProfileScreen() {
       fontWeight: '600',
       marginLeft: 8,
     },
+    // Login prompt styles
+    loginPrompt: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 40,
+    },
+    loginEmoji: {
+      fontSize: 64,
+      marginBottom: 24,
+    },
+    loginTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    loginSubtitle: {
+      fontSize: 16,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 32,
+    },
+    loginButton: {
+      paddingVertical: 16,
+      paddingHorizontal: 32,
+      borderRadius: 12,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    loginButtonText: {
+      color: 'white',
+      fontSize: 18,
+      fontWeight: '600',
+    },
   });
+
+  // If user is not authenticated, show login prompt
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <View style={styles.loginPrompt}>
+          <Text style={styles.loginEmoji}>👤</Text>
+          <Text style={[styles.loginTitle, { color: colors.text }]}>Login Required</Text>
+          <Text style={[styles.loginSubtitle, { color: colors.text, opacity: 0.7 }]}>
+            Please log in to access your profile and settings
+          </Text>
+          <TouchableOpacity
+            style={[styles.loginButton, { backgroundColor: colors.tint }]}
+            onPress={() => router.push('/login')}
+          >
+            <Text style={styles.loginButtonText}>Go to Login</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Mock user stats
+  const userStats = {
+    totalTrips: 12,
+    countriesVisited: 8,
+    totalSpent: 15420,
+    favoriteDestination: 'Japan',
+    memberSince: '2023-01-15',
+    level: 'Explorer',
+  };
+
+  // Mock trip history
+  const tripHistory: TripHistory[] = [
+    {
+      id: '1',
+      destination: 'Tokyo, Japan',
+      date: '2024-02-15',
+      duration: '7 days',
+      cost: 3200,
+      status: 'completed',
+      image: '🏯',
+    },
+    {
+      id: '2',
+      destination: 'Paris, France',
+      date: '2024-03-20',
+      duration: '5 days',
+      cost: 2800,
+      status: 'upcoming',
+      image: '🗼',
+    },
+    {
+      id: '3',
+      destination: 'Bali, Indonesia',
+      date: '2024-01-10',
+      duration: '10 days',
+      cost: 1800,
+      status: 'completed',
+      image: '🏝️',
+    },
+    {
+      id: '4',
+      destination: 'New York, USA',
+      date: '2023-12-05',
+      duration: '6 days',
+      cost: 2500,
+      status: 'completed',
+      image: '🗽',
+    },
+    {
+      id: '5',
+      destination: 'London, UK',
+      date: '2023-11-15',
+      duration: '4 days',
+      cost: 2200,
+      status: 'completed',
+      image: '🏰',
+    },
+  ];
+
+  // Mock achievements
+  const achievements: Achievement[] = [
+    {
+      id: '1',
+      title: 'First Trip',
+      description: 'Completed your first trip',
+      icon: '🎯',
+      unlocked: true,
+    },
+    {
+      id: '2',
+      title: 'Globe Trotter',
+      description: 'Visited 5 different countries',
+      icon: '🌍',
+      unlocked: true,
+    },
+    {
+      id: '3',
+      title: 'Budget Master',
+      description: 'Saved over $1000 on trips',
+      icon: '💰',
+      unlocked: true,
+    },
+    {
+      id: '4',
+      title: 'Adventure Seeker',
+      description: 'Completed 10 trips',
+      icon: '🏔️',
+      unlocked: true,
+    },
+    {
+      id: '5',
+      title: 'World Explorer',
+      description: 'Visit 15 countries',
+      icon: '🌎',
+      unlocked: false,
+      progress: 8,
+    },
+    {
+      id: '6',
+      title: 'VIP Traveler',
+      description: 'Spend $20,000 on trips',
+      icon: '👑',
+      unlocked: false,
+      progress: 77,
+    },
+  ];
+
+  const handleEditProfile = () => {
+    Alert.alert('Edit Profile', 'Profile editing feature coming soon!');
+  };
+
+  const handleViewTrip = (trip: TripHistory) => {
+    Alert.alert(
+      trip.destination,
+      `${trip.duration} trip - ${trip.status === 'completed' ? 'Completed' : 'Upcoming'}\nCost: $${trip.cost.toLocaleString()}`,
+      [
+        { text: 'View Details', onPress: () => console.log('View trip details') },
+        { text: 'OK' },
+      ]
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', style: 'destructive', onPress: logout },
+      ]
+    );
+  };
+
+  const handleViewAllTrips = () => {
+    Alert.alert('All Trips', 'Complete trip history feature coming soon!');
+  };
+
+  const handleShareProfile = () => {
+    Alert.alert('Share Profile', 'Share your travel achievements with friends!');
+  };
+
+  const getUnlockedAchievements = () => achievements.filter(a => a.unlocked);
+  const getLockedAchievements = () => achievements.filter(a => !a.unlocked);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -1,325 +1,270 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet, TouchableOpacity, Alert, ScrollView, View, Text, Dimensions } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link, router } from 'expo-router';
+import { StyleSheet, TouchableOpacity, Alert, View, Text, Modal, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 
-const { width } = Dimensions.get('window');
-
-interface TripHistory {
+interface SavedTrip {
   id: string;
   destination: string;
-  date: string;
+  startDate: string;
+  endDate: string;
   duration: string;
-  cost: number;
-  status: 'completed' | 'upcoming' | 'draft';
+  status: 'draft' | 'planned' | 'completed';
   image: string;
-}
-
-interface UserStats {
-  totalTrips: number;
-  countriesVisited: number;
-  totalSpent: number;
-  favoriteDestination: string;
+  budget: number;
 }
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // Mock user stats
-  const userStats: UserStats = {
-    totalTrips: 12,
-    countriesVisited: 8,
-    totalSpent: 15420,
-    favoriteDestination: 'Japan',
-  };
-
-  // Mock trip history
-  const tripHistory: TripHistory[] = [
+  // Mock data for authenticated users
+  const [recentTrips] = useState<SavedTrip[]>([
     {
       id: '1',
       destination: 'Tokyo, Japan',
-      date: '2024-02-15',
+      startDate: '2024-03-15',
+      endDate: '2024-03-22',
       duration: '7 days',
-      cost: 3200,
-      status: 'completed',
+      status: 'planned',
       image: '🏯',
+      budget: 3200,
     },
     {
       id: '2',
       destination: 'Paris, France',
-      date: '2024-03-20',
+      startDate: '2024-04-10',
+      endDate: '2024-04-15',
       duration: '5 days',
-      cost: 2800,
-      status: 'upcoming',
+      status: 'draft',
       image: '🗼',
+      budget: 1800,
     },
-    {
-      id: '3',
-      destination: 'Bali, Indonesia',
-      date: '2024-01-10',
-      duration: '10 days',
-      cost: 1800,
-      status: 'completed',
-      image: '🏝️',
-    },
-  ];
+  ]);
 
-
-  const handleStartPlanning = () => {
-    router.push('/(tabs)/planner');
+  const handlePlanNewTrip = () => {
+    if (isAuthenticated) {
+      // For now, show an alert since we don't have a dedicated planner page
+      Alert.alert('Plan New Trip', 'Trip planning feature coming soon!');
+    } else {
+      setShowLoginModal(true);
+    }
   };
 
-  const handleViewTrip = (trip: TripHistory) => {
+  const handleViewTrip = (trip: SavedTrip) => {
     Alert.alert(
       trip.destination,
-      `${trip.duration} trip - ${trip.status === 'completed' ? 'Completed' : 'Upcoming'}\nCost: $${trip.cost.toLocaleString()}`,
+      `${trip.duration} trip - ${trip.status === 'completed' ? 'Completed' : trip.status === 'planned' ? 'Planned' : 'Draft'}\nBudget: $${trip.budget.toLocaleString()}`,
       [
         { text: 'View Details', onPress: () => router.push('/itinerary') },
+        { text: 'Edit', onPress: () => Alert.alert('Edit', 'Edit feature coming soon!') },
         { text: 'OK' },
       ]
     );
   };
 
-  const handleEditProfile = () => {
-    Alert.alert('Edit Profile', 'Profile editing feature coming soon!');
+  const handleLoginPress = () => {
+    setShowLoginModal(false);
+    router.push('/login');
   };
 
-  const handleViewAllTrips = () => {
-    Alert.alert('All Trips', 'Trip history feature coming soon!');
+  const handleCloseModal = () => {
+    setShowLoginModal(false);
   };
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#4A90E2', dark: '#1D3D47' }}
-      headerImage={
-        <View style={styles.headerImage}>
-          <Text style={styles.headerEmoji}>🌍✈️🏖️</Text>
-        </View>
-      }>
-      
-      {/* Profile Section */}
-      <ThemedView style={styles.profileSection}>
-        <View style={styles.profileHeader}>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileAvatar}>👤</Text>
-            <View style={styles.profileDetails}>
-              <ThemedText style={styles.profileName}>{user?.name || 'Traveler'}</ThemedText>
-              <ThemedText style={styles.profileEmail}>{user?.email}</ThemedText>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Welcome, {isAuthenticated ? user?.name || 'Traveler' : 'Guest'} 👋
+        </Text>
+        <Text style={[styles.headerSubtitle, { color: colors.text, opacity: 0.7 }]}>
+          {isAuthenticated ? 'Ready for your next adventure?' : 'Explore our features and create an account to save your trips'}
+        </Text>
+      </View>
+
+      {isAuthenticated ? (
+        // Authenticated User Dashboard
+        <>
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity 
+              style={[styles.primaryAction, { backgroundColor: colors.tint }]} 
+              onPress={handlePlanNewTrip}
+            >
+              <Text style={styles.primaryActionIcon}>🤖</Text>
+              <Text style={styles.primaryActionText}>Plan New Trip</Text>
+              <Text style={styles.primaryActionSubtext}>AI-powered trip planning</Text>
+            </TouchableOpacity>
+
+            <View style={styles.secondaryActions}>
+              <TouchableOpacity style={[styles.secondaryAction, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={styles.secondaryActionIcon}>🗺️</Text>
+                <Text style={[styles.secondaryActionText, { color: colors.text }]}>Explore</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.secondaryAction, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={styles.secondaryActionIcon}>⚡</Text>
+                <Text style={[styles.secondaryActionText, { color: colors.text }]}>Optimize</Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
-            <Text style={styles.editProfileIcon}>✏️</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* User Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{userStats.totalTrips}</Text>
-            <ThemedText style={styles.statLabel}>Trips</ThemedText>
+          {/* Recent Trips */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Trips</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/trips')}>
+                <Text style={[styles.viewAllText, { color: colors.tint }]}>View All</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tripsScrollView}>
+              {recentTrips.map((trip, index) => (
+                <TouchableOpacity
+                  key={trip.id}
+                  style={[styles.tripCard, { backgroundColor: colors.background, borderColor: colors.border, marginLeft: index === 0 ? 0 : 12 }]}
+                  onPress={() => handleViewTrip(trip)}
+                >
+                  <Text style={styles.tripEmoji}>{trip.image}</Text>
+                  <Text style={[styles.tripDestination, { color: colors.text }]}>{trip.destination}</Text>
+                  <Text style={[styles.tripDate, { color: colors.text, opacity: 0.7 }]}>{trip.startDate}</Text>
+                  <View style={styles.tripDetails}>
+                    <Text style={[styles.tripDuration, { color: colors.tint }]}>{trip.duration}</Text>
+                    <Text style={[styles.tripCost, { color: colors.tint }]}>${trip.budget.toLocaleString()}</Text>
+                  </View>
+                  <View style={[
+                    styles.tripStatus,
+                    { backgroundColor: trip.status === 'completed' ? '#4CAF50' : trip.status === 'planned' ? '#2196F3' : '#FF9800' }
+                  ]}>
+                    <Text style={styles.tripStatusText}>
+                      {trip.status === 'completed' ? '✓' : trip.status === 'planned' ? '⏰' : '📝'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{userStats.countriesVisited}</Text>
-            <ThemedText style={styles.statLabel}>Countries</ThemedText>
+
+          {/* Quick Access */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Access</Text>
+            <View style={styles.quickAccessGrid}>
+              <TouchableOpacity style={[styles.quickAccessItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={styles.quickAccessIcon}>⚙️</Text>
+                <Text style={[styles.quickAccessText, { color: colors.text }]}>Preferences</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.quickAccessItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={styles.quickAccessIcon}>🏨</Text>
+                <Text style={[styles.quickAccessText, { color: colors.text }]}>Hotels</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.quickAccessItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={styles.quickAccessIcon}>📋</Text>
+                <Text style={[styles.quickAccessText, { color: colors.text }]}>Itineraries</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>${(userStats.totalSpent / 1000).toFixed(0)}k</Text>
-            <ThemedText style={styles.statLabel}>Spent</ThemedText>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>⭐</Text>
-            <ThemedText style={styles.statLabel}>{userStats.favoriteDestination}</ThemedText>
-          </View>
-        </View>
-      </ThemedView>
-
-      {/* Quick Actions */}
-      <ThemedView style={styles.quickActionsContainer}>
-        <TouchableOpacity style={styles.primaryAction} onPress={handleStartPlanning}>
-          <Text style={styles.primaryActionIcon}>🤖</Text>
-          <ThemedText style={styles.primaryActionText}>Start AI Trip Planning</ThemedText>
-          <ThemedText style={styles.primaryActionSubtext}>Create your perfect itinerary</ThemedText>
-        </TouchableOpacity>
-
-        <View style={styles.secondaryActions}>
-          <TouchableOpacity style={styles.secondaryAction}>
-            <Text style={styles.secondaryActionIcon}>⭐</Text>
-            <ThemedText style={styles.secondaryActionText}>Saved Places</ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.secondaryAction}>
-            <Text style={styles.secondaryActionIcon}>🏆</Text>
-            <ThemedText style={styles.secondaryActionText}>Achievements</ThemedText>
-          </TouchableOpacity>
-        </View>
-      </ThemedView>
-
-      {/* Recent Trips */}
-      <ThemedView style={styles.tripsContainer}>
-        <View style={styles.sectionHeader}>
-          <ThemedText type="subtitle">📋 Recent Trips</ThemedText>
-          <TouchableOpacity onPress={handleViewAllTrips}>
-            <ThemedText style={styles.viewAllText}>View All</ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tripsScrollView}>
-          {tripHistory.map((trip, index) => (
-            <TouchableOpacity
-              key={trip.id}
-              style={[styles.tripCard, { marginLeft: index === 0 ? 0 : 12 }]}
-              onPress={() => handleViewTrip(trip)}
-            >
-              <Text style={styles.tripEmoji}>{trip.image}</Text>
-              <ThemedText style={styles.tripDestination}>{trip.destination}</ThemedText>
-              <ThemedText style={styles.tripDate}>{trip.date}</ThemedText>
-              <View style={styles.tripDetails}>
-                <ThemedText style={styles.tripDuration}>{trip.duration}</ThemedText>
-                <ThemedText style={styles.tripCost}>${trip.cost.toLocaleString()}</ThemedText>
-              </View>
-              <View style={[
-                styles.tripStatus,
-                { backgroundColor: trip.status === 'completed' ? '#4CAF50' : trip.status === 'upcoming' ? '#FF9800' : '#9E9E9E' }
-              ]}>
-                <Text style={styles.tripStatusText}>
-                  {trip.status === 'completed' ? '✓' : trip.status === 'upcoming' ? '⏰' : '📝'}
-                </Text>
-              </View>
+        </>
+      ) : (
+        // Guest Mode
+        <>
+          {/* Main Features */}
+          <View style={styles.featuresContainer}>
+            <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={handlePlanNewTrip}>
+              <Text style={styles.featureIcon}>🤖</Text>
+              <Text style={[styles.featureTitle, { color: colors.text }]}>Plan New Trip</Text>
+              <Text style={[styles.featureDescription, { color: colors.text, opacity: 0.7 }]}>
+                AI-powered trip planning with personalized itineraries
+              </Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </ThemedView>
 
-      {/* Travel Insights */}
-      <ThemedView style={styles.insightsContainer}>
-        <ThemedText type="subtitle">💡 Your Travel Insights</ThemedText>
-        <View style={styles.insightCard}>
-          <Text style={styles.insightIcon}>🎯</Text>
-          <View style={styles.insightContent}>
-            <ThemedText style={styles.insightTitle}>Most Visited: {userStats.favoriteDestination}</ThemedText>
-            <ThemedText style={styles.insightDescription}>
-              You've explored {userStats.favoriteDestination} the most. Ready for your next adventure?
-            </ThemedText>
+            <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={() => setShowLoginModal(true)}>
+              <Text style={styles.featureIcon}>🗺️</Text>
+              <Text style={[styles.featureTitle, { color: colors.text }]}>Explore Attractions</Text>
+              <Text style={[styles.featureDescription, { color: colors.text, opacity: 0.7 }]}>
+                Discover amazing places, restaurants, and hidden gems
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={() => setShowLoginModal(true)}>
+              <Text style={styles.featureIcon}>⚡</Text>
+              <Text style={[styles.featureTitle, { color: colors.text }]}>Optimize Routes</Text>
+              <Text style={[styles.featureDescription, { color: colors.text, opacity: 0.7 }]}>
+                Get the most efficient travel routes and save time
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
+      {/* Login Modal */}
+      <Modal
+        visible={showLoginModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Create a free account to continue 🚀
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: colors.text, opacity: 0.7 }]}>
+              Save trips, sync across devices, and unlock full AI features.
+            </Text>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: colors.tint }]}
+              onPress={handleLoginPress}
+            >
+              <Text style={styles.modalButtonText}>Continue</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={handleCloseModal}
+            >
+              <Text style={[styles.modalCloseText, { color: colors.text, opacity: 0.5 }]}>
+                Maybe later
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.insightCard}>
-          <Text style={styles.insightIcon}>💰</Text>
-          <View style={styles.insightContent}>
-            <ThemedText style={styles.insightTitle}>Average Trip Cost</ThemedText>
-            <ThemedText style={styles.insightDescription}>
-              ${(userStats.totalSpent / userStats.totalTrips).toFixed(0)} per trip - Great budgeting!
-            </ThemedText>
-          </View>
-        </View>
-      </ThemedView>
-
-      {/* Quick Stats Summary */}
-      <ThemedView style={styles.quickStatsContainer}>
-        <ThemedText style={styles.quickStatsText}>
-          You've completed {userStats.totalTrips} trips across {userStats.countriesVisited} countries! 
-          Keep exploring the world! 🌍
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      </Modal>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
+  container: {
+    flex: 1,
   },
-  headerEmoji: {
-    fontSize: 48,
-    opacity: 0.8,
-  },
-  // Profile Section
-  profileSection: {
-    marginBottom: 24,
-    backgroundColor: 'rgba(74, 144, 226, 0.05)',
-    borderRadius: 16,
+  header: {
     padding: 20,
+    paddingBottom: 10,
   },
-  profileHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  profileAvatar: {
-    fontSize: 40,
-    marginRight: 12,
-    backgroundColor: '#4A90E2',
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    textAlign: 'center',
-    lineHeight: 50,
-  },
-  profileDetails: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 8,
   },
-  profileEmail: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  editProfileButton: {
-    backgroundColor: 'rgba(74, 144, 226, 0.1)',
-    borderRadius: 20,
-    padding: 8,
-  },
-  editProfileIcon: {
+  headerSubtitle: {
     fontSize: 16,
+    lineHeight: 22,
   },
-  // Stats
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4A90E2',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    opacity: 0.7,
-    textAlign: 'center',
-  },
-  // Quick Actions
-  quickActionsContainer: {
+  // Quick Actions for Authenticated Users
+  quickActions: {
+    paddingHorizontal: 20,
     marginBottom: 24,
   },
   primaryAction: {
-    backgroundColor: '#4A90E2',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -351,12 +296,10 @@ const styles = StyleSheet.create({
   },
   secondaryAction: {
     flex: 1,
-    backgroundColor: 'rgba(74, 144, 226, 0.1)',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(74, 144, 226, 0.2)',
   },
   secondaryActionIcon: {
     fontSize: 24,
@@ -365,31 +308,35 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4A90E2',
   },
-  // Recent Trips
-  tripsContainer: {
+  // Sections
+  section: {
     marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginHorizontal: 20,
     marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   viewAllText: {
     fontSize: 14,
-    color: '#4A90E2',
     fontWeight: '600',
   },
+  // Trips
   tripsScrollView: {
-    flexGrow: 0,
+    paddingLeft: 20,
   },
   tripCard: {
     width: 160,
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -410,7 +357,6 @@ const styles = StyleSheet.create({
   },
   tripDate: {
     fontSize: 12,
-    opacity: 0.6,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -421,12 +367,10 @@ const styles = StyleSheet.create({
   },
   tripDuration: {
     fontSize: 12,
-    color: '#4A90E2',
   },
   tripCost: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4A90E2',
   },
   tripStatus: {
     position: 'absolute',
@@ -442,49 +386,113 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'white',
   },
-  // Insights
-  insightsContainer: {
-    marginBottom: 24,
-  },
-  insightCard: {
+  // Quick Access
+  quickAccessGrid: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(74, 144, 226, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    gap: 12,
   },
-  insightIcon: {
-    fontSize: 24,
-    marginRight: 12,
-    marginTop: 2,
-  },
-  insightContent: {
+  quickAccessItem: {
     flex: 1,
-  },
-  insightTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#4A90E2',
-  },
-  insightDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.8,
-  },
-  // Quick Stats
-  quickStatsContainer: {
-    marginBottom: 16,
-    padding: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(74, 144, 226, 0.05)',
+    padding: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  quickStatsText: {
+  quickAccessIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  quickAccessText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Guest Mode Features
+  featuresContainer: {
+    paddingHorizontal: 20,
+    gap: 20,
+  },
+  featureCard: {
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  featureIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  featureTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  featureDescription: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-    opacity: 0.8,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  modalButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 16,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    paddingVertical: 8,
+  },
+  modalCloseText: {
+    fontSize: 16,
   },
 });
